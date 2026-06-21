@@ -62,6 +62,57 @@
     50%{opacity:.9;}
   }
 
+  /* ---------- notas musicales cayendo ---------- */
+  #notesField{
+    position:fixed;
+    inset:0;
+    z-index:3;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .note{
+    position:absolute;
+    top:-8%;
+    opacity:0;
+    animation-name:noteFall;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+    will-change:transform, opacity;
+  }
+  @keyframes noteFall{
+    0%{transform:translateY(0) translateX(0) rotate(-8deg); opacity:0;}
+    8%{opacity:.55;}
+    50%{transform:translateY(55vh) translateX(16px) rotate(8deg);}
+    92%{opacity:.45;}
+    100%{transform:translateY(115vh) translateX(-14px) rotate(-10deg); opacity:0;}
+  }
+
+  /* ---------- barra de progreso ---------- */
+  .progress-bar{
+    position:fixed;
+    top:0; left:0;
+    height:3px;
+    width:0%;
+    background:linear-gradient(90deg, var(--amber), var(--rose));
+    z-index:45;
+    transition:width .15s linear;
+  }
+
+  /* ---------- estela de corazones (cursor / toque) ---------- */
+  .heart-trail{
+    position:fixed;
+    pointer-events:none;
+    z-index:50;
+    font-size:1rem;
+    color:var(--rose);
+    animation:trailFade 1s ease forwards;
+    will-change:transform, opacity;
+  }
+  @keyframes trailFade{
+    0%{opacity:.85; transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0; transform:translate(-50%,-130%) scale(.5);}
+  }
+
   /* ---------- portada / lámpara ---------- */
   .cover{
     position:relative;
@@ -204,9 +255,10 @@
     background:var(--paper);
     color:var(--ink);
     border-radius:3px;
-    padding:1.8rem 1.7rem 1.6rem;
+    padding:clamp(1.3rem,5vw,1.8rem) clamp(1.15rem,5vw,1.7rem) clamp(1.2rem,5vw,1.6rem);
     margin:0 auto 3.4rem;
     max-width:480px;
+    width:100%;
     box-shadow:0 12px 30px rgba(0,0,0,.35);
     opacity:0;
     transform:translateY(36px) rotate(var(--tilt,-1deg));
@@ -239,12 +291,12 @@
   }
   .card p{
     margin:0;
-    font-size:1.06rem;
+    font-size:clamp(.95rem, 3.6vw, 1.06rem);
     line-height:1.65;
   }
   .card.turn p{
     font-family:var(--display);
-    font-size:1.5rem;
+    font-size:clamp(1.25rem, 5.5vw, 1.5rem);
     line-height:1.45;
   }
 
@@ -280,7 +332,7 @@
   }
   .firefly-field{
     position:relative;
-    height:240px;
+    height:clamp(170px, 40vw, 240px);
     border:1px dashed rgba(243,234,217,.25);
     border-radius:10px;
     margin-bottom:1.2rem;
@@ -308,9 +360,10 @@
   }
   .phrase-slots{
     font-family:var(--display);
-    font-size:1.6rem;
+    font-size:clamp(1.15rem, 5vw, 1.6rem);
     color:var(--paper);
     min-height:2.2rem;
+    padding:0 .5rem;
   }
   .phrase-slots .slot{
     display:inline-block;
@@ -421,12 +474,12 @@
     color:var(--ink);
     text-align:left;
     border-radius:3px;
-    padding:2.2rem 1.8rem;
+    padding:clamp(1.3rem,6vw,2.2rem) clamp(1.1rem,6vw,1.8rem);
     box-shadow:0 16px 40px rgba(0,0,0,.45);
   }
   .letter-body p{
     font-family:var(--display);
-    font-size:1.45rem;
+    font-size:clamp(1.05rem, 4.5vw, 1.45rem);
     line-height:1.6;
     margin:0 0 1rem;
   }
@@ -439,9 +492,12 @@
     color:rgba(199,195,214,.45);
   }
 
-  @media (max-width:480px){
-    .firefly-field{height:200px;}
-    .letter-body p{font-size:1.25rem;}
+  @media (max-width:380px){
+    .title{margin-top:.4rem;}
+    .lamp{width:74px; height:100px;}
+    .sound-btn{width:38px; height:38px; font-size:1rem;}
+    .seal{width:46px; height:46px; font-size:1.25rem;}
+    .card::before{width:42px; height:18px; left:18px;}
   }
 
   @media (prefers-reduced-motion:reduce){
@@ -451,10 +507,12 @@
 </head>
 <body>
 
+<div class="progress-bar" id="progressBar"></div>
 <audio id="bgMusic" src="1.mp3" loop preload="auto"></audio>
 <button class="sound-btn" id="soundBtn" title="Música" aria-label="Activar o silenciar música">🔈</button>
 
 <div id="starField" aria-hidden="true"></div>
+<div id="notesField" aria-hidden="true"></div>
 
 <section class="cover">
   <div class="lamp" aria-hidden="true">
@@ -541,6 +599,67 @@
     }
   })();
 
+  // ---------- notas musicales (caída lenta) ----------
+  const notesField = document.getElementById('notesField');
+  const noteChars = ['♪', '♫', '♬'];
+  let notesStarted = false;
+  let notesIntervalId = null;
+
+  function spawnNote(){
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = noteChars[Math.floor(Math.random() * noteChars.length)];
+    note.style.left = (Math.random() * 90 + 2) + '%';
+    note.style.fontSize = (Math.random() * 0.7 + 1.1).toFixed(2) + 'rem';
+    note.style.color = Math.random() > 0.5 ? 'var(--amber)' : 'var(--rose)';
+    // duración larga a propósito: que caigan despacio, no de golpe
+    note.style.animationDuration = (Math.random() * 6 + 11).toFixed(1) + 's';
+    note.addEventListener('animationend', () => note.remove());
+    notesField.appendChild(note);
+  }
+
+  function startNotes(){
+    if(notesStarted) return;
+    notesStarted = true;
+    spawnNote();
+    notesIntervalId = setInterval(spawnNote, 2400);
+  }
+
+  // ---------- barra de progreso de lectura ----------
+  const progressBar = document.getElementById('progressBar');
+  let progressTicking = false;
+  window.addEventListener('scroll', () => {
+    if(progressTicking) return;
+    progressTicking = true;
+    requestAnimationFrame(() => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0;
+      progressBar.style.width = pct + '%';
+      progressTicking = false;
+    });
+  });
+
+  // ---------- estela de corazones al mover el cursor / dedo ----------
+  let lastTrailTime = 0;
+  function spawnHeartTrail(x, y){
+    if(!document.body.classList.contains('lit')) return;
+    const now = Date.now();
+    if(now - lastTrailTime < 110) return;
+    lastTrailTime = now;
+    const h = document.createElement('div');
+    h.className = 'heart-trail';
+    h.textContent = '❤';
+    h.style.left = x + 'px';
+    h.style.top = y + 'px';
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 1000);
+  }
+  document.addEventListener('mousemove', (e) => spawnHeartTrail(e.clientX, e.clientY));
+  document.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if(t) spawnHeartTrail(t.clientX, t.clientY);
+  }, {passive:true});
+
   // ---------- lámpara y música ----------
   const bgMusic = document.getElementById('bgMusic');
   const soundBtn = document.getElementById('soundBtn');
@@ -548,6 +667,7 @@
 
   document.getElementById('lampBtn').addEventListener('click', () => {
     document.body.classList.add('lit');
+    startNotes();
     bgMusic.play().then(() => {
       soundBtn.textContent = '🔊';
     }).catch(() => {
