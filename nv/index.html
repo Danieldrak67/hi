@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para ti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Literata:ital,wght@0,400;0,500;1,400&family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+
+  /* ============================================
+     ✏️  PARA EDITAR TU CARTA:
+     1. El nombre ya está puesto como "Daniel" en el <script> al final.
+     2. Busca "letterParagraphs" en el <script> para cambiar el texto de la carta final.
+     3. Las confesiones están en el HTML, sección <main id="journal">.
+     4. Pon tu archivo de música en la MISMA carpeta que este .html
+        y nómbralo exactamente "1.mp3" (ya está enlazado abajo).
+     ============================================ */
+
+  :root{
+    --bg-deep:#171a26;
+    --bg-mid:#1f2335;
+    --paper:#f3ead9;
+    --paper-edge:#e1d2ad;
+    --amber:#e8a33d;
+    --rose:#d98a93;
+    --ink:#2b2418;
+    --muted:#c7c3d6;
+    --display:'Caveat', cursive;
+    --body-font:'Literata', serif;
+    --mono:'Courier Prime', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:linear-gradient(180deg, var(--bg-deep), var(--bg-mid) 40%, var(--bg-deep));
+    color:var(--muted);
+    font-family:var(--body-font);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  a{color:inherit;}
+
+  /* ---------- estrellas de fondo ---------- */
+  #starField{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+  }
+  .star{
+    position:absolute;
+    background:#fff;
+    border-radius:50%;
+    animation:twinkle linear infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:.15;}
+    50%{opacity:.9;}
+  }
+
+  /* ---------- portada / lámpara ---------- */
+  .cover{
+    position:relative;
+    z-index:1;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:2rem 1.5rem;
+    transition:filter 1s ease;
+  }
+  body:not(.lit) .cover{filter:brightness(.55);}
+
+  .lamp{
+    position:relative;
+    width:90px;
+    height:120px;
+    margin-bottom:1.5rem;
+  }
+  .lamp-cable{
+    position:absolute;
+    top:0; left:50%;
+    width:2px; height:30px;
+    background:#5a5a66;
+    transform:translateX(-50%);
+  }
+  .lamp-shade{
+    position:absolute;
+    top:28px; left:50%;
+    transform:translateX(-50%);
+    width:0; height:0;
+    border-left:34px solid transparent;
+    border-right:34px solid transparent;
+    border-top:40px solid #3a3d52;
+    transition:border-top-color .8s ease;
+  }
+  body.lit .lamp-shade{border-top-color:#54577a;}
+  .lamp-bulb{
+    position:absolute;
+    top:64px; left:50%;
+    transform:translateX(-50%);
+    width:18px; height:18px;
+    border-radius:50%;
+    background:#4a4a55;
+    transition:background .8s ease, box-shadow .8s ease;
+  }
+  body.lit .lamp-bulb{
+    background:var(--amber);
+    box-shadow:0 0 25px 12px rgba(232,163,61,.55);
+    animation:flicker 3s ease-in-out infinite;
+  }
+  @keyframes flicker{
+    0%,100%{box-shadow:0 0 25px 12px rgba(232,163,61,.55);}
+    50%{box-shadow:0 0 32px 16px rgba(232,163,61,.75);}
+  }
+
+  .title{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(2.8rem, 9vw, 5rem);
+    color:var(--paper);
+    margin:.2rem 0 0;
+    line-height:1;
+  }
+  .subtitle{
+    font-size:clamp(.95rem, 2.5vw, 1.15rem);
+    color:var(--muted);
+    margin:.6rem 0 2.2rem;
+    max-width:32ch;
+  }
+  .btn-lamp{
+    font-family:var(--mono);
+    font-size:.85rem;
+    letter-spacing:.04em;
+    background:transparent;
+    border:1px solid var(--amber);
+    color:var(--amber);
+    padding:.85rem 1.6rem;
+    border-radius:999px;
+    cursor:pointer;
+    transition:background .3s ease, color .3s ease;
+  }
+  .btn-lamp:hover{background:var(--amber); color:var(--bg-deep);}
+  body.lit .btn-lamp{display:none;}
+
+  .sound-btn{
+    position:fixed;
+    top:1rem;
+    right:1rem;
+    z-index:40;
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    border:1px solid rgba(232,163,61,.5);
+    background:rgba(23,26,38,.6);
+    color:var(--amber);
+    font-size:1.1rem;
+    cursor:pointer;
+    backdrop-filter:blur(4px);
+    transition:transform .2s ease, background .3s ease;
+  }
+  .sound-btn:hover{transform:scale(1.08);}
+
+  .scroll-cue{
+    margin-top:2.5rem;
+    font-family:var(--mono);
+    font-size:.75rem;
+    color:var(--muted);
+    opacity:0;
+    transition:opacity .8s ease 1s;
+  }
+  body.lit .scroll-cue{opacity:.7; animation:bob 2s ease-in-out infinite;}
+  @keyframes bob{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(8px);}
+  }
+
+  /* ---------- journal / cartas ---------- */
+  #journal{
+    position:relative;
+    z-index:1;
+    max-width:640px;
+    margin:0 auto;
+    padding:2rem 1.25rem 6rem;
+    opacity:.12;
+    filter:blur(3px);
+    pointer-events:none;
+    transition:opacity 1.2s ease, filter 1.2s ease;
+  }
+  body.lit #journal{
+    opacity:1;
+    filter:none;
+    pointer-events:auto;
+  }
+
+  .card{
+    position:relative;
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:3px;
+    padding:1.8rem 1.7rem 1.6rem;
+    margin:0 auto 3.4rem;
+    max-width:480px;
+    box-shadow:0 12px 30px rgba(0,0,0,.35);
+    opacity:0;
+    transform:translateY(36px) rotate(var(--tilt,-1deg));
+    transition:opacity .8s ease, transform .8s ease;
+  }
+  .card:nth-child(2){--tilt:1deg;}
+  .card:nth-child(3){--tilt:-1.4deg;}
+  .card:nth-child(4){--tilt:.8deg;}
+  .card.visible{
+    opacity:1;
+    transform:translateY(0) rotate(var(--tilt,-1deg));
+  }
+  .card::before{
+    content:'';
+    position:absolute;
+    top:-12px; left:28px;
+    width:54px; height:22px;
+    background:var(--rose);
+    opacity:.55;
+    transform:rotate(-4deg);
+  }
+  .eyebrow{
+    display:block;
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#9c6b3f;
+    margin-bottom:.5rem;
+  }
+  .card p{
+    margin:0;
+    font-size:1.06rem;
+    line-height:1.65;
+  }
+  .card.turn p{
+    font-family:var(--display);
+    font-size:1.5rem;
+    line-height:1.45;
+  }
+
+  .card.love p{
+    text-align:center;
+    font-family:var(--display);
+    font-size:clamp(1.8rem, 6vw, 2.4rem);
+    line-height:1.35;
+  }
+  .card.love .heart{
+    display:inline-block;
+    color:var(--rose);
+    animation:heartbeat 1.6s ease-in-out infinite;
+  }
+  @keyframes heartbeat{
+    0%,100%{transform:scale(1);}
+    15%{transform:scale(1.3);}
+    30%{transform:scale(1);}
+    45%{transform:scale(1.22);}
+    60%{transform:scale(1);}
+  }
+
+  /* ---------- juego de luciérnagas ---------- */
+  .game{
+    text-align:center;
+    margin:0 auto 4rem;
+  }
+  .game-hint{
+    font-family:var(--mono);
+    font-size:.85rem;
+    color:var(--paper);
+    margin-bottom:1.4rem;
+  }
+  .firefly-field{
+    position:relative;
+    height:240px;
+    border:1px dashed rgba(243,234,217,.25);
+    border-radius:10px;
+    margin-bottom:1.2rem;
+  }
+  .firefly{
+    position:absolute;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:radial-gradient(circle, var(--amber), transparent 70%);
+    box-shadow:0 0 12px 4px rgba(232,163,61,.6);
+    cursor:pointer;
+    animation:floaty 4s ease-in-out infinite;
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .firefly.caught{
+    opacity:0;
+    transform:scale(.3);
+    pointer-events:none;
+  }
+  @keyframes floaty{
+    0%,100%{transform:translate(0,0);}
+    25%{transform:translate(8px,-10px);}
+    50%{transform:translate(-6px,6px);}
+    75%{transform:translate(10px,4px);}
+  }
+  .phrase-slots{
+    font-family:var(--display);
+    font-size:1.6rem;
+    color:var(--paper);
+    min-height:2.2rem;
+  }
+  .phrase-slots .slot{
+    display:inline-block;
+    margin:0 .25rem;
+    border-bottom:2px solid var(--rose);
+    min-width:2.6ch;
+    transition:opacity .5s ease;
+  }
+
+  /* ---------- sobre final ---------- */
+  .finale{
+    text-align:center;
+  }
+  .envelope-wrap{
+    perspective:900px;
+    margin:0 auto 1.2rem;
+  }
+  .envelope{
+    position:relative;
+    width:min(85%, 360px);
+    aspect-ratio:3/2;
+    margin:0 auto;
+    transition:opacity .6s ease .4s, transform .6s ease .4s;
+  }
+  .envelope.opening{
+    opacity:0;
+    transform:scale(.85);
+  }
+  .body-paper{
+    position:absolute;
+    inset:0;
+    background:var(--paper);
+    border-radius:4px;
+    box-shadow:0 14px 30px rgba(0,0,0,.4);
+  }
+  .flap{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:58%;
+    background:var(--paper-edge);
+    clip-path:polygon(0 0, 100% 0, 50% 92%);
+    transform-origin:top center;
+    transition:transform .9s cubic-bezier(.4,0,.2,1), opacity .9s ease;
+    z-index:2;
+  }
+  .envelope.opening .flap{
+    transform:rotateX(-160deg);
+    opacity:.4;
+  }
+  .seal{
+    position:absolute;
+    top:36%; left:50%;
+    transform:translate(-50%,-50%);
+    width:54px; height:54px;
+    border-radius:50%;
+    background:#8a5560;
+    color:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.5rem;
+    z-index:3;
+    cursor:not-allowed;
+    opacity:.55;
+    box-shadow:0 3px 8px rgba(0,0,0,.4);
+    transition:opacity .4s ease, transform .25s ease, background .4s ease;
+  }
+  .seal.ready{
+    cursor:pointer;
+    opacity:1;
+    background:var(--rose);
+    animation:pulseSeal 1.8s ease-in-out infinite;
+  }
+  .seal.shake{
+    animation:shake .4s ease;
+  }
+  @keyframes pulseSeal{
+    0%,100%{box-shadow:0 0 0 0 rgba(217,138,147,.5);}
+    50%{box-shadow:0 0 0 12px rgba(217,138,147,0);}
+  }
+  @keyframes shake{
+    0%,100%{transform:translate(-50%,-50%);}
+    25%{transform:translate(-58%,-50%);}
+    75%{transform:translate(-42%,-50%);}
+  }
+  .finale-hint{
+    font-family:var(--mono);
+    font-size:.8rem;
+    color:var(--paper);
+    opacity:.75;
+  }
+
+  .letter-reveal{
+    max-width:480px;
+    margin:1rem auto 0;
+    opacity:0;
+    transform:translateY(20px);
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  .letter-reveal.show{
+    opacity:1;
+    transform:translateY(0);
+  }
+  .letter-paper{
+    background:
+      repeating-linear-gradient(transparent, transparent 31px, rgba(0,0,0,.06) 32px),
+      var(--paper);
+    color:var(--ink);
+    text-align:left;
+    border-radius:3px;
+    padding:2.2rem 1.8rem;
+    box-shadow:0 16px 40px rgba(0,0,0,.45);
+  }
+  .letter-body p{
+    font-family:var(--display);
+    font-size:1.45rem;
+    line-height:1.6;
+    margin:0 0 1rem;
+  }
+
+  footer{
+    text-align:center;
+    padding:3rem 1rem 4rem;
+    font-family:var(--mono);
+    font-size:.7rem;
+    color:rgba(199,195,214,.45);
+  }
+
+  @media (max-width:480px){
+    .firefly-field{height:200px;}
+    .letter-body p{font-size:1.25rem;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<audio id="bgMusic" src="1.mp3" loop preload="auto"></audio>
+<button class="sound-btn" id="soundBtn" title="Música" aria-label="Activar o silenciar música">🔈</button>
+
+<div id="starField" aria-hidden="true"></div>
+
+<section class="cover">
+  <div class="lamp" aria-hidden="true">
+    <div class="lamp-cable"></div>
+    <div class="lamp-shade"></div>
+    <div class="lamp-bulb"></div>
+  </div>
+  <h1 class="title">Para ti</h1>
+  <p class="subtitle">una carta un poco distinta a todas las que has recibido</p>
+  <button class="btn-lamp" id="lampBtn">enciende la lámpara</button>
+  <div class="scroll-cue">desliza hacia abajo ↓</div>
+</section>
+
+<main id="journal">
+
+  <article class="card">
+    <span class="eyebrow">Confesión 1</span>
+    <p>No soy la persona más divertida del mundo. No tengo mil historias para hacerte reír ni soy el alma de la fiesta. Vista desde afuera, mi vida es bastante común.</p>
+  </article>
+
+  <article class="card">
+    <span class="eyebrow">Confesión 2</span>
+    <p>No me creo el mejor en nada, ni frente a otros ni frente a ti. Pero hay una cosa en la que sí me esfuerzo todos los días: en quererte bien.</p>
+  </article>
+
+  <article class="card">
+    <span class="eyebrow">Confesión 3</span>
+    <p>A veces soy lento para notar tus indirectas. Me distraigo, no me doy cuenta, y termino comportándome como un niño torpe contigo. Lo siento.</p>
+  </article>
+
+  <article class="card turn">
+    <span class="eyebrow">Pero...</span>
+    <p>Contigo no tengo miedo de ser así. Puedo ser torpe, común, poco gracioso… y aun así sentirme seguro. Eso, para mí, ya es extraordinario.</p>
+  </article>
+
+  <article class="card love">
+    <span class="eyebrow">Y sobre todo</span>
+    <p>Te amo.<br>Muchísimo. <span class="heart">❤</span><br>Más de lo que estas palabras alcanzan a decir.</p>
+  </article>
+
+  <section class="game">
+    <p class="game-hint" id="gameHint">Encuentra las 6 luciérnagas para descubrir una frase escondida</p>
+    <div class="firefly-field" id="fireflyField"></div>
+    <div class="phrase-slots" id="phraseSlots"></div>
+  </section>
+
+  <section class="finale">
+    <div class="envelope-wrap">
+      <div class="envelope" id="envelope">
+        <div class="body-paper"></div>
+        <div class="flap"></div>
+        <div class="seal" id="seal" title="Toca para abrir">❤</div>
+      </div>
+    </div>
+    <p class="finale-hint" id="finaleHint">el sello se desbloquea cuando encuentres las 6 luciérnagas</p>
+
+    <div class="letter-reveal" id="letterReveal" hidden>
+      <div class="letter-paper">
+        <div class="letter-body" id="letterBody"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>hecho con torpeza y cariño</footer>
+
+<script>
+  // ---------- estrellas ----------
+  (function createStars(){
+    const field = document.getElementById('starField');
+    const n = window.innerWidth < 600 ? 45 : 80;
+    for(let i=0;i<n;i++){
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = (Math.random()*2 + 1).toFixed(1);
+      s.style.left = Math.random()*100 + '%';
+      s.style.top = Math.random()*100 + '%';
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      s.style.animationDuration = (Math.random()*3 + 2).toFixed(2) + 's';
+      s.style.animationDelay = (Math.random()*4).toFixed(2) + 's';
+      field.appendChild(s);
+    }
+  })();
+
+  // ---------- lámpara y música ----------
+  const bgMusic = document.getElementById('bgMusic');
+  const soundBtn = document.getElementById('soundBtn');
+  bgMusic.volume = 0.45;
+
+  document.getElementById('lampBtn').addEventListener('click', () => {
+    document.body.classList.add('lit');
+    bgMusic.play().then(() => {
+      soundBtn.textContent = '🔊';
+    }).catch(() => {
+      // el navegador bloqueó el autoplay; con el botón de sonido se puede iniciar igual
+    });
+    setTimeout(() => {
+      document.getElementById('journal').scrollIntoView({behavior:'smooth', block:'start'});
+    }, 600);
+  });
+
+  soundBtn.addEventListener('click', () => {
+    if(bgMusic.paused){
+      bgMusic.play().then(() => { soundBtn.textContent = '🔊'; }).catch(() => {});
+    } else {
+      bgMusic.muted = !bgMusic.muted;
+      soundBtn.textContent = bgMusic.muted ? '🔇' : '🔊';
+    }
+  });
+
+  // ---------- revelado de tarjetas al hacer scroll ----------
+  const cards = document.querySelectorAll('.card');
+  const cardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        entry.target.classList.add('visible');
+      }
+    });
+  }, {threshold:.35});
+  cards.forEach(c => cardObserver.observe(c));
+
+  // ---------- juego de luciérnagas ----------
+  // ✏️ puedes cambiar estas 6 palabras (deben sumar la frase que quieras revelar)
+  const words = ["Contigo", "soy", "yo,", "sin", "miedo", "alguno."];
+  const field = document.getElementById('fireflyField');
+  const slotsWrap = document.getElementById('phraseSlots');
+  const gameHint = document.getElementById('gameHint');
+  let caught = 0;
+
+  words.forEach((word, i) => {
+    const slot = document.createElement('span');
+    slot.className = 'slot';
+    slot.id = 'slot-' + i;
+    slot.textContent = '____';
+    slotsWrap.appendChild(slot);
+
+    const fly = document.createElement('div');
+    fly.className = 'firefly';
+    fly.dataset.index = i;
+    fly.style.left = (8 + Math.random()*80) + '%';
+    fly.style.top = (10 + Math.random()*75) + '%';
+    fly.style.animationDelay = (Math.random()*2).toFixed(2) + 's';
+    fly.addEventListener('click', () => {
+      if(fly.classList.contains('caught')) return;
+      fly.classList.add('caught');
+      document.getElementById('slot-' + i).textContent = word;
+      caught++;
+      if(caught < words.length){
+        gameHint.textContent = 'Luciérnagas atrapadas: ' + caught + '/' + words.length;
+      } else {
+        gameHint.textContent = 'Frase encontrada. El sello ya está listo.';
+        unlockSeal();
+      }
+    });
+    field.appendChild(fly);
+  });
+
+  // ---------- sobre y carta final ----------
+  const envelope = document.getElementById('envelope');
+  const seal = document.getElementById('seal');
+  const finaleHint = document.getElementById('finaleHint');
+  const letterReveal = document.getElementById('letterReveal');
+  const letterBody = document.getElementById('letterBody');
+  let sealReady = false;
+
+  function unlockSeal(){
+    sealReady = true;
+    seal.classList.add('ready');
+    finaleHint.textContent = 'toca el sello para abrir la carta';
+  }
+
+  seal.addEventListener('click', () => {
+    if(!sealReady){
+      seal.classList.add('shake');
+      setTimeout(() => seal.classList.remove('shake'), 400);
+      return;
+    }
+    envelope.classList.add('opening');
+    finaleHint.style.opacity = '0';
+    setTimeout(() => {
+      envelope.style.display = 'none';
+      letterReveal.hidden = false;
+      requestAnimationFrame(() => letterReveal.classList.add('show'));
+      startTypewriter();
+    }, 700);
+  });
+
+  // ✏️ EDITA TU CARTA AQUÍ. Cada elemento del array es un párrafo.
+  const TU_NOMBRE = "Daniel";
+  const letterParagraphs = [
+    "Mi amor,",
+    "Quiero decirte algo que llevo tiempo pensando.",
+    "Sé que no soy la persona más divertida del mundo, ni el que mejor sabe sacarte una sonrisa cuando estás distraída. Mi vida, vista desde afuera, es bastante común, y no me creo el mejor en nada frente a los demás. Pero a pesar de todo eso, hay algo que sí sé con certeza: te amo, y mucho más de lo que alguna vez he sabido decirte.",
+    "Perdón por no ser como los chicos a los que estás acostumbrada. Perdón también por las veces que no supe leer tus indirectas, por ser un poco tonto y comportarme como un niño contigo. No es que no me importe, es que contigo siento que puedo bajar la guardia y ser exactamente como soy, sin actuar, sin fingir ser alguien más interesante.",
+    "Contigo me siento seguro. Y ese sentimiento, para alguien tan común como yo, es lo más extraordinario que me ha pasado.",
+    "Gracias por quedarte, por verme de verdad, y por dejarme amarte a mi manera.",
+    "Te amo,",
+    TU_NOMBRE
+  ];
+
+  function startTypewriter(){
+    letterBody.innerHTML = '';
+    let pIndex = 0;
+
+    function typeParagraph(){
+      if(pIndex >= letterParagraphs.length) return;
+      const p = document.createElement('p');
+      letterBody.appendChild(p);
+      const text = letterParagraphs[pIndex];
+      let cIndex = 0;
+      const interval = setInterval(() => {
+        p.textContent += text[cIndex];
+        cIndex++;
+        if(cIndex >= text.length){
+          clearInterval(interval);
+          pIndex++;
+          setTimeout(typeParagraph, 320);
+        }
+      }, 26);
+    }
+    typeParagraph();
+  }
+</script>
+</body>
+</html>
